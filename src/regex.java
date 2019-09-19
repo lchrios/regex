@@ -1,4 +1,4 @@
-
+// Clase basura
 public class regex {
 
 	public String ex;
@@ -8,11 +8,11 @@ public class regex {
 	}
 	
 	public boolean isInLanguage(String str) {
-		int k;
-		for (int i = 0; i < ex.length(); i++) {
-			k = i + 1;
-		
+		int k = 0;
+		for (int i = k; i < ex.length(); i++) {
+			k++;
  		}
+		return false;
 	}
 	
 }

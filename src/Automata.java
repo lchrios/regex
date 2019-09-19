@@ -36,7 +36,7 @@ public class Automata {
 	public LinkedList<container> ins;
 	
 	// Constructor
-	public Automata (String regex) throws Exception {
+	public Automata (String regex) {
 		this.ins = new LinkedList<container>();
 		this.regex = regex;
 		this.compile();
@@ -54,21 +54,42 @@ public class Automata {
 	//recibe una expresión individual a concatenar con la resultante de la siguiente iteración
 	
 	public container iterCompile(String regex) {
+		String[] op = regex.split("\\+");
+		String[] res = new String[op.length];
+		String tmp;
+		
+		LinkedList<Boolean> bs = new LinkedList<Boolean>();
+		
 		// caso de único caracter
 		if (regex.length() == 1) {
-			return new container(regex.charAt(0));
+			return new container(String.valueOf(regex.charAt(0)));
 		// en este caso sólo puede haber 
-		} else if (regex.length() == 2) {
-			return new container(regex.charAt(0), true);
+		} else if (regex.length() == 2 && regex.charAt(1) == '*') {
+			return new container(String.valueOf(regex.charAt(0)), true);
 		}
 		else {
-			
-			String[] op = regex.split("+");
-			String[] res = new String[op.length];
-			String tmp;
-			
-			LinkedList<Boolean> bs = new LinkedList<Boolean>();
-			
+			if (op.length == 1) {
+				char c;
+				String f = "", temp = op[0];
+				for (int j = 0; j < temp.length();j++) {
+					c = temp.charAt(j);
+
+					// checa si es Kleene
+					if (c == '*') {
+						bs.add(true);
+					} 
+					else {
+						// checa si el siguiente es kleene o letra para saber si negar la cerradura del caracter actual
+						if (j + 1 < temp.length() && temp.charAt(j+1) != '*') {
+							bs.add(false);
+						} 
+						f.concat(String.valueOf(c));
+					}
+				}
+				String[] toCont = new String[1];
+				toCont[0] = f;
+				return new container(toCont, bs);
+			}
 			for (int i = 0; i < op.length; i++) {
 				tmp = op[i];
 				
@@ -109,22 +130,38 @@ public class Automata {
 		}
 	}
 	
+	public boolean hasAllTrue(LinkedList<Boolean> l) {
+		for (int i = 0; i < l.size(); i++) if (!l.get(i)) return false;
+		return true;
+	}
+	
+	public boolean hasAnyTrue(LinkedList<Boolean> l) {
+		for (int i = 0; i < l.size(); i++) if (l.get(i)) return true;
+		return false;
+	}
+	
 	
 	public boolean checkInRegex(String str) {
 		char[] ch = str.toCharArray();
 		// container Number
 		int contN = 0;
-		char last, current;
-		boolean isValid = true;
+		char last = ch[0], current;
+		container cnt;
+		LinkedList<Boolean> finValid = new LinkedList<Boolean>(), tmp = new LinkedList<Boolean>();
+		
 		for(int i = 0; i < ch.length; i++) {
+			if (contN >= ins.size()) {
+				return true;
+			}
 			current = ch[i];
-			container cnt = ins.get(contN);
+			cnt = ins.get(contN);
 			// es modulo de suma
 			if (cnt.plus) {
 				// operador de suma
 				String s;
 
 				for (int j = 0; j < cnt.values.length; j++) {
+					tmp.clear();
 					// checa para esa opcion
 					s = cnt.values[j];
 
@@ -132,21 +169,22 @@ public class Automata {
 					for (int k = 0; k < s.length(); k++) {
 						// checa si tiene kleene el caracter 
 						if (cnt.moKleene.get(j+k)) {
-							// si el siguiente es el mismo continua
-							if (current != cnt.values[k]) {
-								last = current;
+							// si el actual no es el mismo
+							if(current == last) {
 								k--;
+								last = current;
 							}
 						} 
 						// no es kleene
 						else {
 							// no es caracter
 							if (current != s.charAt(k)) {
-								isValid = false;
+								tmp.add(false);
 							}
 						}
 					}
 				}
+				finValid.add(hasAnyTrue(tmp));
 				contN++;
 			}
 			// no es modulo de suma
@@ -154,13 +192,24 @@ public class Automata {
 				// checa kleene
 				if (cnt.kleene) {
 					// si es diferente va a la siguiente evaluación
-					if (current != cnt.value) contN++;
+					if (!String.valueOf(current).equals(cnt.value)) {
+						finValid.add(true);
+						contN++;
+					}
 				}
 			}
 			
 			
 			last = current;
 		}
-		return isValid;
+		return hasAllTrue(finValid);
+	}
+	
+	public String toString() {
+		String r = "";
+		for (int i = 0; i < this.ins.size(); i++) {
+			r.concat(this.ins.get(i).toString()).concat("\n");
+		}
+		return r;
 	}
 }
